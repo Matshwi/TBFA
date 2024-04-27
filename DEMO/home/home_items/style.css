@@ -1,5 +1,42 @@
 /** Wednesday 28th of February 2018 07:41:31 PM (core) **/
 
+  @import url('https://fonts.googleapis.com/css2?family=FAMILY_NAME:wght@WEIGHT_OR_RANGE&display=swap');
+
+
+@font-face {
+    font-family: "Praxis SemiBold";
+    src: url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-SemiBold.eot);
+    src: url("https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-SemiBold.eot#1678451151") format("embedded-opentype"),url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-SemiBold.ttf) format("truetype")
+}
+
+@font-face {
+    font-family: "Praxis Regular";
+    src: url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Regular.eot);
+    src: url("https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Regular.eot#1678451151") format("embedded-opentype"),url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Regular.ttf) format("truetype")
+}
+
+@font-face {
+    font-family: "Praxis Light";
+    src: url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Light.eot);
+    src: url("https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Light.eot#1678451151") format("embedded-opentype"),url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Light.ttf) format("truetype")
+}
+
+@font-face {
+    font-family: 'themify';
+    src: url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.eot);
+    src: url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.eot#1678451151) format('embedded-opentype'),url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.woff) format('woff'),url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.ttf) format('truetype'),url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.svg) format('svg');
+    font-weight: 400;
+    font-style: normal
+}
+
+@font-face {
+    font-family: 'FontAwesome';
+    src: url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.eot#1678451151);
+    src: url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.eot#1678451151) format('embedded-opentype'),url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.woff2#1678451151) format('woff2'),url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.woff#1678451151) format('woff'),url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.ttf#1678451151) format('truetype'),url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.svg?v=4.3.0#fontawesomeregular) format('svg');
+    font-weight: 400;
+    font-style: normal
+}
+
 #mega-menu-wrap-top-bar-menu #mega-menu-top-bar-menu ul, #mega-menu-wrap-top-bar-menu #mega-menu-top-bar-menu li, #mega-menu-wrap-top-bar-menu #mega-menu-top-bar-menu p, #mega-menu-wrap-top-bar-menu #mega-menu-top-bar-menu img:not(.mega-menu-logo), #mega-menu-wrap-top-bar-menu #mega-menu-top-bar-menu div, #mega-menu-wrap-top-bar-menu #mega-menu-top-bar-menu a {
   color: #435061;
   font-family: inherit;
@@ -333,7 +370,7 @@
   -ms-border-radius: 0px 0px 0px 0px;
   -o-border-radius: 0px 0px 0px 0px;
   border-radius: 0px 0px 0px 0px;
-  font-family: inherit;
+  font-family: "Praxis Regular", Helvetica, Arial, sans-serif;
   font-size: 13px;
 }
 @media only screen and (max-width: 992px) {

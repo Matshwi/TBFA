@@ -39,6 +39,32 @@ License URI:
 @import url(//fonts.googleapis.com/css?family=Montserrat:400,700|Karla:400,700,400italic,700italic);
 
 @font-face {
+    font-family: "Praxis SemiBold";
+    src: url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-SemiBold.eot);
+    src: url("https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-SemiBold.eot#1678451151") format("embedded-opentype"),url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-SemiBold.ttf) format("truetype")
+}
+
+@font-face {
+    font-family: "Praxis Regular";
+    src: url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Regular.eot);
+    src: url("https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Regular.eot#1678451151") format("embedded-opentype"),url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Regular.ttf) format("truetype")
+}
+
+@font-face {
+    font-family: "Praxis Light";
+    src: url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Light.eot);
+    src: url("https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Light.eot#1678451151") format("embedded-opentype"),url(https://www.kofiannanfoundation.org/app/uploads/2015/09/PraxisLT-Light.ttf) format("truetype")
+}
+
+@font-face {
+    font-family: 'themify';
+    src: url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.eot);
+    src: url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.eot#1678451151) format('embedded-opentype'),url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.woff) format('woff'),url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.ttf) format('truetype'),url(https://www.kofiannanfoundation.org/app/plugins/3d-flipbook-dflip-lite/assets/css/../fonts/themify.svg) format('svg');
+    font-weight: 400;
+    font-style: normal
+}
+
+@font-face {
 	font-family: star;
 	font-style: normal;
 	font-weight: 400;
@@ -47,6 +73,14 @@ License URI:
 		 url(framework/fonts/star.woff) format("woff"),
 		 url(framework/fonts/star.ttf) format("truetype"),
 		 url(framework/fonts/star.svg#star) format("svg");
+}
+
+@font-face {
+    font-family: 'FontAwesome';
+    src: url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.eot#1678451151);
+    src: url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.eot#1678451151) format('embedded-opentype'),url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.woff2#1678451151) format('woff2'),url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.woff#1678451151) format('woff'),url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.ttf#1678451151) format('truetype'),url(https://www.kofiannanfoundation.org/app/themes/kaf/plugins/font-awesome-4.3.0/css/../fonts/fontawesome-webfont.svg?v=4.3.0#fontawesomeregular) format('svg');
+    font-weight: 400;
+    font-style: normal
 }
 
 @font-face {
@@ -917,7 +951,7 @@ ol li ol li {
 .sd-header-extra {
 	color: #91a1b4;
 	float: right;
-	font: 700 13px/13px Montserrat, Tahoma, sans-serif;
+	font: 700 13px/13px "Praxis Regular", Helvetica, Arial, sans-serif;
 	margin-top: 30px;
 	text-transform: uppercase;
 }
@@ -5594,7 +5628,7 @@ body .wpb_content_element .wpb_accordion_wrapper .wpb_accordion_content {
 	margin-bottom: 10px;	
 }
 .sd-staff-featured .sd-staff-content {
-	background-color: #ff681a;
+	background-color: #dc0d1f;
 	padding: 20px;
 }
 .sd-staff-featured h3 a,

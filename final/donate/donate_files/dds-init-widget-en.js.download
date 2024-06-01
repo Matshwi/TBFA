@@ -1,0 +1,331 @@
+/*jslint browser: true, sloppy: true, plusplus: true, nomen: true, todo: true*/
+/*globals $, jQuery, console, ddsWidgetConfig */
+
+if (!window.console) {
+    var noop = function () {},
+        console = {
+            log: noop,
+            info: noop,
+            warn: noop,
+            error: noop
+        };
+}
+(function (prodOptions, devOptions) {
+
+    var tempJQuery,
+        scriptTag,
+        devMode = (location.hash.indexOf("ddsdev") !== -1),
+        noCache = (location.hash.indexOf("rnw-no-cache") !== -1),
+        options = (!devMode || !devOptions)? prodOptions : devOptions,
+        scripts = options.scripts,
+        css = options.css,
+        baseUrl = options.baseUrl,
+        cdnUrl = (options.cdnBaseUrl && !noCache) ? options.cdnBaseUrl : null,
+        preferredUrl = (cdnUrl) ? cdnUrl : baseUrl,
+        basePath= options.basePath;
+
+    initPreloader();
+
+    // load jquery and then everything else
+    loadjQuery(function () {
+        init();
+    });
+
+    function initPreloader () {
+        // target is available
+        if (document.getElementsByClassName("dds-widget-container").length > 0) {
+            showPreloader();
+        } else {
+            // wait for target / wait for dom ready
+            if (document.readyState === "complete" ||
+                (document.readyState !== "loading" && !document.documentElement.doScroll)) {
+                showPreloader();
+            } else {
+                document.addEventListener("DOMContentLoaded", showPreloader);
+            }
+        }
+    }
+
+    function showPreloader () {
+        var divNode,
+            widgetContainers,
+            widgetContainerChildNodes,
+            textNodes,
+            index,
+            widgetIndex,
+            hasNoContent;
+
+        if (document.getElementsByClassName("dds-widget-container").length > 0) {
+            textNodes = [];
+            hasNoContent = true;
+            widgetContainers = document.getElementsByClassName("dds-widget-container");
+            for(widgetIndex in widgetContainers) {
+                //In Safari 9.1.x length is a enumerable property. Therefore we have to exclude it explicitly
+                if(widgetContainers.hasOwnProperty(widgetIndex) && widgetIndex != 'length') {
+                    divNode = document.createElement("div");
+                    divNode.setAttribute("rnwid", "rnw-preloader");
+                    widgetContainerChildNodes = widgetContainers[widgetIndex].childNodes;
+                    for (index in widgetContainerChildNodes) {
+                        // Node is an element
+                        if (widgetContainerChildNodes.hasOwnProperty(index) && widgetContainerChildNodes[index].nodeType === 1) {
+                            widgetContainerChildNodes[index].setAttribute("rnwid", "rnw-preloader");
+                            hasNoContent = false;
+                            // Node is a text node
+                        } else if (widgetContainerChildNodes.hasOwnProperty(index) && widgetContainerChildNodes[index].nodeType === 3 &&
+                            widgetContainerChildNodes[index].nodeValue.trim() != "") {
+                            //Keep text node reference to wrap it later into a div element
+                            textNodes.push(widgetContainerChildNodes[index]);
+                            hasNoContent = false;
+                        }
+                    }
+                    for (index in textNodes) {
+                        if (textNodes.hasOwnProperty(index)) {
+                            divNode.appendChild(textNodes[index]);
+                        }
+                    }
+                    if (hasNoContent) {
+                        // Create a text node
+                        divNode.appendChild(document.createTextNode('Loading...'));
+                    }
+                    widgetContainers[widgetIndex].appendChild(divNode);
+                }
+            }
+        }
+    }
+
+    function loadjQuery(cb) {
+        cb = cb || noop
+
+        //jquery 1.9.1 patched because of http://bugs.jquery.com/ticket/13936.
+        if (window.jQuery === undefined || window.jQuery.fn.jquery != '3.2.1') {
+            scriptTag = document.createElement('script');
+            scriptTag.setAttribute('type', 'text/javascript');
+            scriptTag.setAttribute('src',
+                preferredUrl + '/widgets/lema/_default/js/jquery-3.2.1.min.js');
+            if (scriptTag.readyState) {
+                scriptTag.onreadystatechange = function () { // For old versions of IE
+                    if (this.readyState === 'complete' || this.readyState === 'loaded') {
+                        jQueryFix = window.jQuery.noConflict(true);
+                        cb()
+                    }
+                };
+            } else { // Other browsers
+                scriptTag.onload = function() {
+                    jQueryFix = window.jQuery.noConflict(true);
+                    cb()
+                }
+            }
+            //tempJQuery = window.jQuery;
+
+            // Try to find the head, otherwise default to the documentElement
+            (document.getElementsByTagName('head')[0]
+            || document.documentElement).appendChild(scriptTag);
+        } else {
+            // The jQuery version on the window is the one we want to use
+            /*jQuery = window.jQuery;
+             tempJQuery = jQuery;*/
+            jQueryFix = window.jQuery;
+            cb();
+        }
+    }
+
+    function createDdsWidgetConfig() {
+        if (typeof ddsWidgetConfig !== 'object') {
+            ddsWidgetConfig = {};
+        }
+        if (typeof rnwWidget !== 'object') {
+            rnwWidget = {};
+        }
+        if (typeof rnwWidget.widgets !== 'object') {
+            rnwWidget.widgets = {};
+        }
+        if(typeof rnwWidget.widgets['lema'] !== 'object') {
+            rnwWidget.widgets['lema'] = {};
+        }
+        if(typeof rnwWidget.widgets['lema']['configurations'] !== 'object') {
+            rnwWidget.widgets['lema']['configurations'] = {};
+        }
+        if(typeof rnwWidget.widgets['lema']['configurations']['kofi-annan2'] !== 'object') {
+            rnwWidget.widgets['lema']['configurations']['kofi-annan2'] = {};
+        }
+
+        // Set this variable so that it can be used as an IIFE argument in widget scripts.
+        // This way, the widget code doesn't need to 'know' what name it has been given.
+        rnwWidget.widgets.currentName = 'lema';
+    }
+
+    function addCssTag(cssUrl) {
+        var cssLink = jQueryFix('<link>', {
+                rel: 'stylesheet',
+                type: 'text/css',
+                href: cssUrl
+            });
+        jQueryFix('head').append(cssLink);
+    }
+
+    function init() {
+        jQueryFix(document).ready(function () {
+
+            jQueryFix(window).on("rnw-widget-loaded", function(event) {
+                jQueryFix(".dds-widget-container [rnwid=rnw-preloader]").remove();
+            });
+
+            createDdsWidgetConfig();
+
+            loadJavascript(scripts);
+        });
+    }
+
+    function scriptLoaderHandler() {
+        loadJavascript();
+    }
+
+    function addParametersToDdsWidgetConfig() {
+        var epikOptions = {};epikOptions["apiendpoint"] = "https://payment.raisenow.com/epayment/api/step/pay/merchant/kof-e5f4ea";epikOptions["secure_cookie"] = "false";epikOptions["test_mode"] = "true";epikOptions["method"] = "POST";epikOptions["mobile_mode"] = "false";epikOptions["enable_jquery"] = "true";epikOptions["iframe_container"] = "iframe_wrapper";epikOptions["trigger_event"] = "false";epikOptions["auto_submit"] = "false";epikOptions["currency"] = "chf";epikOptions["language"] = "de";epikOptions["delete_data_after_submit"] = "true";epikOptions["popup"] = "false";var baseResponseUrl=window.location.protocol + "//" + window.location.host;epikOptions.success_url="https://lema.raisenow.com/widgets/lema/rnw-widget.html";epikOptions.error_url="https://lema.raisenow.com/widgets/lema/rnw-widget.html";epikOptions.cancel_url="https://lema.raisenow.com/widgets/lema/rnw-widget.html";epikOptions.iframe_loading_page="https://lema.raisenow.com/widgets/lema/rnw-widget.html?ddssubmit=true";epikOptions.widget_uuid="kofi-annan2";epikOptions.pollstatus_url="https://lema.raisenow.com/widgets/lema/_default/pollstatus.php";epikOptions.crmc_url="https://lema.raisenow.com";epikOptions.merchant_id="";rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].epikOptions = epikOptions;rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].baseResponseUrl = baseResponseUrl;rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].translations = {"common":{"placeholders":{"year":"YYYY","month":"MM","day":"DD"},"confirmbutton":"Next","donationbutton":"Donate now","editbutton":"Change","monthly":"monthly","quarterly":"quarterly","semestral":"half-yearly","yearly":"annually","single":"One-off","recurring":"and donate","currency":"Fr.","currency_iso":"CHF","currency_long":"Francs","pleasechoose":"Please select..","dataloading":"Data is being transmitted ...","yes":"Yes","no":"No","ok":"OK","cancel":"Cancel","payment_methods":{"es":"Payment Slip","ezs":"Payment Slip","sms":"SMS","pfc":"PostFinance Card","pef":"PostFinance E-Finance","vis":"VISA","eca":"MasterCard","amx":"American Express","din":"Diners Club \/ Discover Card","dd":"Direct Debit","dib":"Online Bank Transfer","pex":"PayPal","pp":"PayPal","twi":"TWINT","mpw":"Masterpass"}},"validation":{"class_rules":{"customamount":{"messages":{"required":"Please enter an amount","digits":"Please enter an amount","rnwmin":"Please enter an amount over CHF {0}"}},"cardno":{"messages":{"required":"Please enter a credit card number","creditcard":"Please enter a valid credit card number","rnwcreditcard":"Please enter a supported credit card number"}},"expm":{"messages":{"required":"Please enter expiration month","digits":"Please enter expiration month in numbers","range":"Please enter a number between 1 and 12."}},"expy":{"messages":{"required":"Please enter expiration year","digits":"Please enter expiration year in four digits","range":"The expiration year entered is out of range"}},"cvv":{"messages":{"required":"Please enter your credit card's CVV code","digits":"Plese enter the security code in numbers"}},"msisdn":{"messages":{"required":"Please enter your Swiss mobile number","msisdn":"Please enter a valid Swiss mobile number"}},"iban":{"messages":{"required":"Please enter your Swiss IBAN number","iban":"Please enter a valid IBAN number","ibanCountry":"Please enter a Swiss IBAN number. Foreign accounts cannot be charged."}},"bank_name":{"messages":{"required":"Please enter your bank or PostFinance account details"}},"stored_customer_salutation":{"messages":{"required":"Please make a selection"}},"stored_customer_firstname":{"messages":{"required":"Please enter a first name"}},"stored_customer_lastname":{"messages":{"required":"Please enter a last name"}},"stored_customer_email":{"messages":{"required":"Please enter your e-mail address","minlength":"Please enter a valid e-mail address","email":"Please enter a valid e-mail address"}},"customer_birthdate_day":{"messages":{"required":"Please enter your day of birth","digits":"Please enter the date in numbers","range":"Please enter a number between 1 and 31."}},"customer_birthdate_month":{"messages":{"required":"Please enter your month of birth","digits":"Please enter the date in numbers","range":"Please enter a number between 1 and 12."}},"customer_birthdate_year":{"messages":{"required":"Please enter your year of birth","digits":"Please enter the year with four digits","range":"Please enter your correct year of birth"}},"stored_customer_street":{"messages":{"required":"Please enter a street name"}},"stored_customer_zip_code":{"messages":{"required":"Please enter a post code","digits":"Please enter only numbers here","minlength":"The post code consists of at least 4 digits"}},"stored_customer_city":{"messages":{"required":"Please enter a town\/city"}},"stored_recipient_salutation":{"messages":{"required":"Please make a selection"}},"stored_recipient_firstname":{"messages":{"required":"Please enter a first name"}},"stored_recipient_lastname":{"messages":{"required":"Please enter a last name"}},"recipient_birthdate_day":{"messages":{"required":"Please enter your day of birth","digits":"Please enter the date in numbers","range":"Please enter a number between 1 and 31."}},"recipient_birthdate_month":{"messages":{"required":"Please enter your month of birth","digits":"Please enter the date in numbers","range":"Please enter a number between 1 and 12."}},"recipient_birthdate_year":{"messages":{"required":"Please enter your year of birth","digits":"Please enter the year with four digits","range":"Please enter your correct year of birth"}},"stored_recipient_street":{"messages":{"required":"Please enter the street name"}},"stored_recipient_zip_code":{"messages":{"required":"Please enter a post code","minlength":"The post code consists of at least 4 digits","digits":"Please enter only numbers here"}},"stored_recipient_city":{"messages":{"required":"Please enter a town\/city"}},"member_salutation":{"messages":{"required":"Please make a selection"}},"member_firstname":{"messages":{"required":"Please enter a first name"}},"member_lastname":{"messages":{"required":"Please enter a last name"}},"member_birthdate_day":{"messages":{"required":"Please enter a day of birth","digits":"Please enter the date in numbers","range":"Please enter a number between 1 and 31."}},"member_birthdate_month":{"messages":{"required":"Please enter a month of birth","digits":"Please enter the date in numbers","range":"Please enter a number between 1 and 12."}},"member_birthdate_year":{"messages":{"required":"Please enter a year of birth","digits":"Please enter the year with four digits","range":"Please enter your correct year of birth"}}}},"field_values":{"stored_customer_email_permission":"true","stored_customer_donation_receipt":"true","stored_customer_salutation_mr":"mr","stored_customer_salutation_ms":"ms","stored_customer_salutation_miss":"miss","stored_customer_salutation_mrs":"mrs","stored_customer_salutation_neutral":"neutral","stored_recipient_salutation_mr":"mr","stored_recipient_salutation_ms":"ms","stored_recipient_salutation_miss":"miss","stored_recipient_salutation_mrs":"mrs","stored_recipient_salutation_neutral":"neutral","member_salutation_mr":"mr","member_salutation_ms":"ms","member_salutation_miss":"miss","member_salutation_mrs":"mrs","member_salutation_neutral":"neutral"},"bank_names":{"bc_1":"SNB","bc_2":"UBS AG","bc_4":"Credit Suisse Group AG","bc_5":"New Bank of Argovie","bc_6":"RBA Regional Banks","bc_7":"Cantonal Bank","bc_8":"Raiffeisenbank","bc_9":"PostFinance AG"},"page_edit_subscription":{"title":"Your current information","name":"First \/ Last Name:","email":"E-Mail:","payment_method":"Payment method:","donate":"Frequency of donations:","donation_amount":"Donation amount:","donation_target":"Purpose of donation:","status":"Status:","status_active_text":"Active","status_inactive_text":"Inactive","aside_title":"","aside_text":"","aside_image":"","intervals":{"interval_default":"Regular","interval_01_00_*_*_1":"weekly","interval_01_00_L_*_*":"monthly","interval_01_00_L_*\/3_*":"quarterly","interval_01_00_L_*\/6_*":"half-yearly","interval_01_00_L_12_*":"annually","interval_01_00_1_*_*":"monthly","interval_01_00_1_*\/3_*":"quarterly","interval_01_00_1_*\/6_*":"half-yearly","interval_01_00_1_12_*":"annually"},"back_to_overview_link_text":"Back to overview","charged":"charged","contact_information":"contact information","subscription_information":"subscription","expiry_date":"Date of expiry:","renew":{"success_title":"Many thanks","success_subtitle":"Your standing order has been successfully renewed","success_text":"Thank you for renewing your standing order.","cancel_text":"Do you want to end your","cancel_link_text":"subscription","success_link_text":"Link to new standing order","update_button_text":"Enter new credit card","submit_button_text":"Validate credit card","change_title":"Edit details"}},"page_error_subscription":{"title":"Error processing your standing order","sub_title":"Standing order not found","content":{"intro_html":"<span>Your standing order cannot be found.<\/span>","back_button":"Back to donation form"}},"page_cancel_subscription":{"title":"Cancel standing order","content":{"intro_html":"<span>Click on the link below to cancel your standing order <\/span>","cancel_button":"Cancel","back_to_overview_link_text":"Back to overview"}},"page_subscription_renew_success":{"title":"Thank you for renewing your standing order","content_html":"<span>Thank you<\/span>","reload_to_overview_link_text":"Back to overview"},"page_form":{"donate_button_label":"Donate","data_protection":{"text_html":"Secure payment by <a href=\"https:\/\/www.raisenow.com\/?utm_source=product&utm_medium=lema\" target=\"_blank\">RaiseNow<\/a>","link_text":"Data Protection Policy"}},"subscription":{"intervals":{"interval_default":"Regular","interval_*_*_1":"weekly","interval_L_*_*":"monthly","interval_L_*\/3_*":"quarterly","interval_L_*\/6_*":"half-yearly","interval_L_12_*":"annually","interval_1_*_*":"monthly","interval_1_*\/3_*":"quarterly","interval_1_*\/6_*":"half-yearly","interval_1_12_*":"annually"}},"payment":{"success":{"title":"Thank you for your donation to the Kofi Annan Foundation. Your generosity will help us with our mission to mobilise political will to overcome threats to peace, development and human rights.","button":"New donation","content_html":"Your donation: <span class=\"lema-success-amount\"><\/span> . An email receipt of this transaction has been sent to the email address you provided."},"success_ES":{"title":"Thank you for your donation","button":"New donation","content_html":"<span>Link to your personal payment slip:<\/span> <a href=\"#\" target=\"_blank\" class=\"lema-success-pdflink\">Download the payment slip here<\/a>"},"success_ES_true":{"title":"Thank you for your donation","button":"New donation","content_html":"We will send you the requested payment slips as soon as possible."},"success_DD":{"title":"Thank you for your donation","button":"New donation","content_html":"<span>Link to your personal DD Form:<\/span> <a class=\"lema-success-pdflink\" target=\"_blank\"  href=\"#\">Download the form here<\/a>"}},"step_donation_target":{"title":"Purpose of donation","purposes":[{"id":"zweck1","title":"Purpose 1","text":"","campaign_id":1234,"campaign_subid":1234,"image":""},{"id":"zweck2","title":"Purpose 2","text":"","campaign_id":1234,"campaign_subid":1234,"image":""}]},"step_currency":{"title":"Currency","currencies":{"usd":"USD","chf":"CHF","eur":"EUR"}},"step_amount":{"title":"Amount","labels":{"one_time":"One-off"},"intervals":{"default":"Regular","weekly":"weekly","monthly":"monthly","quarterly":"quarterly","semestral":"half-yearly","yearly":"annually"},"multiple_currencies":{"usd":{"currency_iso":"USD","onetime_amounts":[{"text":25,"value":2500},{"text":50,"value":5000},{"text":75,"value":7500},{"text":100,"value":10000}],"recurring_amounts":[{"text":15,"value":1500},{"text":20,"value":2000},{"text":50,"value":5000},{"text":120,"value":12000}]},"chf":{"currency_iso":"CHF","onetime_amounts":[{"text":25,"value":2500},{"text":50,"value":5000},{"text":75,"value":7500},{"text":100,"value":10000}],"recurring_amounts":[{"text":15,"value":1500},{"text":20,"value":2000},{"text":50,"value":5000},{"text":120,"value":12000}]},"eur":{"currency_iso":"EUR","onetime_amounts":[{"text":25,"value":2500},{"text":50,"value":5000},{"text":75,"value":7500},{"text":100,"value":10000}],"recurring_amounts":[{"text":15,"value":1500},{"text":20,"value":2000},{"text":50,"value":5000},{"text":120,"value":12000}]}},"onetime_amounts":[{"text":25,"value":2500},{"text":50,"value":5000},{"text":75,"value":7500},{"text":100,"value":10000}],"recurring_amounts":[{"text":15,"value":1500},{"text":20,"value":2000},{"text":50,"value":5000},{"text":120,"value":12000}]},"step_payment_method":{"title":"Type of payment","sub_title":"Choose payment method","cc":{"tab_title":"Credit Card","labels":{"expiry":"Date of expiry:","cvv":"CVV:","cardno":"Card Number","expm":"MM","expy":"YY"},"cvv_popup":[{"text":"These are the last 3 or 4 digits in the signature field on the back of your card."}],"intro_text":"","information_link":"Note on paying by credit card","information_popup":[{"html":"<strong>Security:<\/strong><br\/>All information exchanged during credit card donations is SSL-encrypted. This data can neither be detected, intercepted nor used by third parties. Information is also not stored in our data systems."},{"images":["_default\/img\/visa_verified.png","_default\/img\/mastercard_secure.png"]}]},"pf":{"tab_title":"PostFinance","icons":["pfc","pef"],"labels":{"pfc":"PostFinance Card","pef":"PostFinance E-Finance"},"intro_text":"","information_link":"Note on paying by PostFinance","information_popup":[{"html":"Once you have completed and submitted this form, you will be redirected to PostFinance in order to complete your donation."},{"images":""}]},"sms":{"tab_title":"SMS","labels":{"msisdn":"Please enter your mobile number"},"intro_text":"","information_link":"Note on paying by SMS","information_popup":[{"html":"Your donation will be paid through your mobile phone account or debited to your PostFinance account. There are no additional fees incurred for a successful donation. Your mobile phone provider and PostFinance guarantee secure transmission of your SMSes."},{"images":""}]},"es":{"tab_title":"Payment Slip","labels":{"download":"Download payment slip as a PDF","order":"Send the printed payment slip to my home"},"intro_text":"","information_link":"Note on paying with a payment slip","information_popup":[{"html":"<strong>Which payment slip?<\/strong><br\/>Downloading the PDF version of the payment slip is ideal if you wish to donate via online banking. If you order a printed payment slip to your home, please note that there will be additional charges for the institution for shipping and payment at the post office."},{"images":""}]},"ezs":{"tab_title":"Payment Slip","labels":{"download":"Payment Slip as PDF (download)","order":"Payment Slip to be sent via post"},"intro_text":"","information_link":"Note on paying with a payment slip","information_popup":[{"html":"<strong>Which payment slip?<\/strong><br\/>Payment Slip as a PDF (download) is ideal if you want to donate via e-banking. We are also happy to send the payment slip to you. Please note that sending payment slips and receiving donations via post incurs additional costs for us."},{"images":""}]},"dd":{"tab_title":"DD","labels":{"iban":"IBAN","bank_name":"Name of Bank","download":"Download DD as a PDF","order":"Send the printed DD to my home"},"intro_text":"","information_link":"Note on DD payments","information_popup":[{"html":"A regular donation via Direct Debit (DD\/LSV) ensures that your financial contribution arrives efficiently and cost-effectively."},{"images":""}]},"pex":{"tab_title":"PayPal","icons":["pex"],"labels":"","intro_text":"Once you have completed and submitted this form, you will be redirected to PayPal to confirm your donation."},"pp":{"tab_title":"PayPal","icons":["pp"],"labels":"","intro_text":"Once you have completed and submitted this form, you will be redirected to PayPal to confirm your donation."},"dib":{"tab_title":"Online Bank Transfer","icons":["dib"],"labels":"","intro_text":"","information_link":"Note on Klarna payments","information_popup":[{"html":"Easy and direct payment via online banking. At the end of the donation process, you will be forwarded directly to Klarna."},{"images":[""]}]},"twi":{"tab_title":"TWINT","icons":["twi"],"labels":"","intro_text":"To pay with TWINT, you will need to have installed the TWINT iOS or Android app on your smartphone. Payment is triggered by scanning the QR code or manually entering the 5-digit transaction number into the TWINT app."},"mpw":{"tab_title":"Masterpass","icons":["mpw"],"intro_text":"If you make a donation with the Masterpass wallet, you will be forwarded directly to Masterpass. Please follow the instructions there."},"stp":{"tab_title":"Credit Card","labels":{"expiry":"Date of expiry:","cvv":"CVV:","cardno":"Card Number","expm":"MM","expy":"YY"},"cvv_popup":[{"text":"These are the last 3 or 4 digits in the signature field on the back of your card."}],"intro_text":"","information_link":"Note on paying by credit card","information_popup":[{"html":"<strong>Security:<\/strong><br\/>All information exchanged during credit card donations is SSL-encrypted. This data can neither be detected, intercepted nor used by third parties. Information is also not stored in our data systems."},{"images":""}]}},"step_customer_address_compact_mode":{"title":"Your data","labels":{"contact_information":"Your personal data","email":"Your e-mail address","address":"Adresse","birthdate":"Birth date","link_text_edit":"change my personal data","link_text_notme":"This isn't me"}},"step_customer_identity":{"title":"Your personal data","labels":{"salutation_ms":"Ms","salutation_mr":"Mr","salutation_miss":"Miss","salutation_mrs":"Mrs","salutation_neutral":"Other","firstname":"First name","lastname":"Last Name","birthdate":"Date of birth","email":"E-Mail","email_permission":" Yes, send me email updates about the work of the Kofi Annan Foundation.","message":"Remarks","donation_receipt":"Yes, I want a donation receipt for tax returns"}},"step_customer_address":{"title":"Your address","labels":{"company":"Company (optional)","street":"Street","street_number":"No.","street2":"Additional street information","pobox":"P.O.Box","zip_code":"Postcode","city":"Town\/City"}},"step_recipient_information":{"title":"Beneficiary child","labels":{"salutation_ms":"Ms.","salutation_mr":"Mr.","firstname":"First name","lastname":"Last Name","birthdate":"Date of birth:","street":"Street","street_number":"No.","street2":"Additional street information","pobox":"P.O Box","zip_code":"Postcode","city":"Town\/City"}},"step_members":{"title":"Family members","labels":{"salutation_ms":"Ms.\/ Miss","salutation_mr":"Mr.\/ Mister","firstname":"First name","lastname":"Last Name","birthdate":"Date of birth:"},"delete_dialog_text":"Do you really want to delete this entry?","add_button":"Add a family member"},"overlay_data_protection":{"title":"Data protection","content":"The transmission of your data is encoded. The Kofi Annan Foundation itself does not save any of your card information, your payment data is transmitted directly through RaiseNow, a partner certified by the Payment Card Industry. Our service providers use the information merely to perform their tasks and are obligated to follow the Swiss data protection regulations. You are able to reduce your donation from your taxable income. Donors receive a donation receipt\/confirmation for the attention of the tax authority via e-mail. Donations are transferred to the Kofi Annan Foundation."},"overlay_loading":{"content":{"intro_text":"Payment process in being initiated ...","ajax_loader":"_default\/img\/ajax-loader.gif"}},"overlay_payment_cancel":{"title":"You have cancelled the process.","content":{"text":"We are unable to process your donation. You have cancelled the payment."}},"overlay_payment_error":{"title":"An error has occured.","content":{"text":"An error occurred while transferring your donation data. You can contact our collaborators by phone at the number +41 22 919 7520 or by e-mail at info@kofiannanfoundation.org.","show_details":"View details"}},"overlay_sms_poll":{"title":"Thank you, only one step to go","content":{"time_remaining":"Remaining time for the confirmation of your donation","text":"We have received your donation message. You will shortly receive an SMS text message to the mobile number specified. Please confirm your donation immediately by SMS text message (to avoid misuse). Only then will you have donated to our most important projects. We will receive your donation via your mobile phone bill."},"footer":{"retry":"Not received an SMS text message?","cancel":"Cancel donation"}},"overlay_subscription_error":{"title":"Error processing your standing order","content":{"text":"Your standing order could not be found."}},"overlay_subscription_cancel_error":{"title":"Error processing your standing order","content":{"text":"Your standing order could not be cancelled."}},"overlay_subscription_cancel_confirmation":{"title":"Standing order cancelled","content":{"text":"You have successfully cancelled your standing order"}},"email":{"general":{"salutation":{"mr":"Mr","ms":"Ms","mrs":"Mrs","miss":"Miss","neutral":"Other"},"salutation_long":{"mr":"Dear Mr","ms":"Dear Ms","mrs":"Dear Mrs","miss":"Dear Miss","neutral":"Dear","unknown":"Dear"},"boolean":{"yes":true,"no":false},"parameters":{"feedback_phone":"+41 22 919 7520","feedback_fax":"000 000 00 00","feedback_email":"info@kofiannanfoundation.org"},"intervals":{"default":"Regular","weekly":"weekly","monthly":"monthly","quarterly":"quarterly","semestral":"half-yearly","yearly":"annually"},"recurring_intervals":{"default":"Regular","weekly":"weekly","monthly":"monthly","quarterly":"quarterly","semestral":"half-yearly","yearly":"annually"},"payment_methods":{"es":"Payment Slip","sms":"SMS","pfc":"PostFinance Card","pef":"PostFinance E-Finance","vis":"VISA","eca":"Master Card","amx":"American Express","din":"Diners Club \/ Discover Card","dd":"DD","dib":"Online Bank Transfer","pex":"PayPal","pp":"PayPal","twi":"TWINT","mpw":"Masterpass"},"payment_addons":{"es":{"download":"(Download)","mail":"(Post)"}}},"confirmation":{"subject":"Thank you for your donation","intro":"{{ salutation_long }} {{ lastname }}","text":["Thank you for your generous support!","","We are pleased to confirm your donation to Kofi Annan Foundation. Below is a summary of your gift.","Donation in favour of: Kofi Annan Foundation {{ stored_rnw_purpose_text }}\nPayment method: {{ payment_method }}\nAmount donated: {{ amount }}\nTransaction number: {{ transaction_id }}\n\nYour contact information:\n{{ salutation }}\n{{ firstname }} {{ lastname }}\n{{ address }}\n\nNewsletter: {% if (stored_customer_email_permission == 'true') %}yes{%else%}no{% endif %}","","If you have any questions about your donation or our work, you can reach us by phone at {{ feedback_phone }} or by e-mail at {{ feedback_email }}."],"outro":"Thank you very much for your donation!","postscript":"","footer":"The Kofi Annan Foundation"},"confirmation_es":{"subject":"Thank you for your donation!","intro":"{{ salutation_long }} {{ lastname }}","text":["Thank you for your support!","We are pleased to confirm your donation to Kofi Annan Foundation. With an electronic payment slip you are donating in a particulary cost-effective and efficient way. Thank you for your support. The details are shown below:","Donation in favour of: Kofi Annan Foundation {{ stored_rnw_purpose_text }}\nPayment method: {{ payment_method }}\nAmount donated: {{ amount }}\nTransaction number: {{ transaction_id }}\nLink to your payment slip: {{ espayment_pdflink }}\n\nYour contact information:\n{{ salutation }}\n{{ firstname }} {{ lastname }}\n{{ address }}\n\nNewsletter: {% if (stored_customer_email_permission == 'true') %}yes{%else%}no{% endif %}\n\nDonation receipt: {% if (stored_customer_donation_receipt == 'true')%}yes{%else%}no{% endif %}\n\nYour comments:\n{{ stored_customer_message }}","","Our donation service is available to answer any questions about your donation or our work. You can reach us by phone at {{ feedback_phone }}, by e-mail {{ feedback_email }} or by Fax {{ feedback_fax }}."],"outro":"Thank you very much for your donation!","postscript":"","footer":"Your Kofi Annan Foundation-Team"},"confirmation_es_true":{"subject":"Thank you for your donation!","intro":"{{ salutation_long }} {{ lastname }}","text":["Thank you for your support!","We are pleased to confirm your donation to Kofi Annan Foundation. We will send you the requested payment slips as soon as possible. We also want to thank you in advance for your support. The details are shown below:","Donation in favour of: Kofi Annan Foundation {{ stored_rnw_purpose_text }}\nPayment method: {{ payment_method }}\nAmount donated: {{ amount }}\nTransaction number: {{ transaction_id }}\n\nYour contact information:\n{{ salutation }}\n{{ firstname }} {{ lastname }}\n{{ address }}\n\nNewsletter: {% if (stored_customer_email_permission == 'true') %}yes{%else%}no{% endif %}\n\nDonation receipt: {% if (stored_customer_donation_receipt == 'true')%}yes{%else%}no{% endif %}\n\nYour comments:\n{{ stored_customer_message }}","","Our donation service is available to answer any questions about your donation or our work. You can reach us by phone at {{ feedback_phone }}, by e-mail {{ feedback_email }} or by Fax {{ feedback_fax }}."],"outro":"Thank you very much for your donation!","postscript":"","footer":"Your Kofi Annan Foundation-Team"},"confirmation_dd":{"subject":"Thank you very much for your donation!","intro":"{{ salutation_long }} {{ lastname }}","text":["Thank you for your support!","We are pleased to confirm your donation to Kofi Annan Foundation. The details are shown below:","Donation in favour of: Kofi Annan Foundation {{ stored_rnw_purpose_text }}\nPayment method: {{ payment_method }}\nAmount donated: {{ amount }} {{ stored_translated_recurring_interval }}\nTransaction number: {{ transaction_id }}\nLink to your DD form: {{ pdflink }}\n\nYour contact information:\n{{ salutation }}\n{{ firstname }} {{ lastname }}\n{{ address }}\n\nNewsletter: {% if (stored_customer_email_permission == 'true') %}yes{%else%}no{% endif %}\n\nDonation receipt: {% if (stored_customer_donation_receipt == 'true')%}yes{%else%}no{% endif %}\n\nYour comments:\n{{ stored_customer_message }}","","Our donation service is available to answer any questions about your donation or our work. You can reach us by phone at {{ feedback_phone }}, by e-mail {{ feedback_email }} or by Fax {{ feedback_fax }}."],"outro":"Thank you very much for your donation!","postscript":"","footer":"Your Kofi Annan Foundation-Team"},"subscription":{"event_subscribe":{"subject":"Thank you for your regular donation","intro":"{{ salutation_long }} {{ lastname }}","text":["Thank you for pledging to make a donation of {{ amount }}, that will benefit our important projects {{ interval }}. From now on, we will automatically debit the amount pledged. You specified the following payment method: {{ payment_method }} {{ masked_cc }}."," ","Donation in favour of: Kofi Annan Foundation {{ stored_rnw_purpose_text }}\nPayment method: {{ payment_method }}\nAmount donated: {{ amount }}\nTransaction number: {{ transaction_id }}\nInterval: {{ interval }}\n\nYour contact information:\n{{ salutation }}\n{{ firstname }} {{ lastname }}\n{{ address }}\n\nNewsletter: {% if (stored_customer_email_permission == 'true') %}yes{%else%}no{% endif %}\n\nDonation receipt: {% if (stored_customer_donation_receipt == 'true')%}yes{%else%}no{% endif %}\n\nYour comments:\n{{ stored_customer_message }}","","You will be notified via e-mail of any donation payments and have the opportunity of adjusting your payment details or terminating your support."," ","Regular donations are very important for our projects: You reduce our administration costs and make project planning more predictable. Once again, many thanks."],"outro":"Yours sincerely","footer":"Your Kofi Annan Foundation-Team"},"event_charged":{"subject":"Your regular donation to Kofi Annan Foundation","intro":"{{ salutation_long }} {{ lastname }}","text":["Many thanks for your {{ interval }} donation to Kofi Annan Foundation. As requested, we have debited {{ amount }} on {{ date }}. You have selected the following payment method: {{ payment_method }} {{ masked_cc }}."," ","Would you like to change your payment method?","Please click here - {{ subscription_edit_url|raw }}"," ","Would you like to cancel your regular donation?","Please click here - {{ subscription_edit_url|raw }}"," ","If you have any questions or feedback, please contact us directly by phone {{ feedback_phone }} or email {{ feedback_email }}."," ","Many thanks once again for your support."],"outro":"Kind regards","footer":"Your Kofi Annan Foundation-Team"},"event_renew":{"subject":"Your regular donation to Kofi Annan Foundation","intro":"{{ salutation_long }} {{ lastname }}","text":["Many thanks for the adjustment to your payment method for your {{ interval }} donation to Kofi Annan Foundation. You have selected the following new payment method: {{ payment_method }} {{ masked_cc }}."," ","Donation in favour of: Kofi Annan Foundation {{ stored_rnw_purpose_text }}\nPayment method: {{ payment_method }}\nAmount donated: {{ amount }} {{ interval }}\nTransaction number: {{ transaction_id }}\n\nYour contact information:\n{{ salutation }}\n{{ firstname }} {{ lastname }}\n{{ address }}\n\nYour comments:\n{{ stored_customer_message }}","If you have any questions or feedback, please contact us directly by phone {{ feedback_phone }} or email {{ feedback_email }}."," "],"outro":"Thank you once again!","footer":"Your Kofi Annan Foundation-Team"},"event_charge_error":{"subject":"There\u2019s been a problem debiting your regular donation to Kofi Annan Foundation","intro":"{{ salutation_long }} {{ lastname }}","text":["You transfer us {{ interval }} a donation of {{ amount }}. Unfortunately, we were not able to debit your account on {{ date }}. It is possible that your {{ payment_method }} {{ masked_cc }} has expired or been suspended, or that you have reached your card limit."," ","Would you like to change your payment method?","Please click here - {{ subscription_edit_url|raw }}"," ","Have you reached your card limit? You don\u2019t need to do anything: we will attempt to debit your donation on the next possible date. You will receive the relevant confirmation by email."," ","If you need help or have any questions, please don\u2019t hesitate to call us on {{ feedback_phone }} or email us at {{ feedback_email }}."," ","Many thanks for your support!"],"outro":"Best wishes","footer":"Your Kofi Annan Foundation-Team"},"event_cancel":{"subject":"Cancellation confirmation of your regular donation to Kofi Annan Foundation","intro":"{{ salutation_long }} {{ lastname }}","text":["This is confirmation that you have cancelled your {{ interval }} donation to Kofi Annan Foundation. We will no longer debit your account {{ payment_method }} {{ masked_cc }}.","","Your contact information:\n{{ salutation }}\n{{ firstname }} {{ lastname }}\n{{ address }}","We deeply regret your decision and would very much like to know the reason for your cancellation. Please take a little time to let us know. Send an email to {{ feedback_email }} or call us on {{ feedback_phone }}. We are very grateful for all your support so far and hope that you may support our work by donating again in the future."],"outro":"Best wishes","postscript":"","footer":"Your Kofi Annan Foundation-Team"}}},"countries":{"CH":"Switzerland","DE":"Germany","FR":"France","IT":"Italy","AF":"Afghanistan","AL":"Albania","DZ":"Algeria","AS":"American Samoa","AD":"Andorra","AO":"Angola","AI":"Anguilla","AQ":"Antarctica","AG":"Antigua and Barbuda","AR":"Argentina","AM":"Armenia","AW":"Aruba","AU":"Australia","AT":"Austria","AZ":"Azerbaijan","BS":"Bahamas","BH":"Bahrain","BD":"Bangladesh","BB":"Barbados","BY":"Belarus","BE":"Belgium","BZ":"Belize","BJ":"Benin","BM":"Bermuda","BT":"Bhutan","BO":"Bolivia","BA":"Bosnia and Herzegovina","BW":"Botswana","BV":"Bouvet Island","BR":"Brazil","IO":"British Indian Ocean Territory","BN":"Brunei Darussalam","BG":"Bulgaria","BF":"Burkina Faso","BI":"Burundi","KH":"Cambodia","CM":"Cameroon","CA":"Canada","CV":"Cape Verde","KY":"Cayman Islands","CF":"Central African Republic","TD":"Chad","CL":"Chile","CN":"China","CX":"Christmas Island","CC":"Cocos (Keeling) Islands","CO":"Colombia","KM":"Comoros","CG":"Congo (Brazzaville)","CD":"Congo (Kinshasa)","CK":"Cook Islands","CR":"Costa Rica","HR":"Croatia","CU":"Cuba","CY":"Cyprus","CZ":"Czech Republic","CI":"C\u00f4te dIvoire","DK":"Denmark","DJ":"Djibouti","DM":"Dominica","DO":"Dominican Republic","EC":"Ecuador","EG":"Egypt","SV":"El Salvador","GQ":"Equatorial Guinea","ER":"Eritrea","EE":"Estonia","ET":"Ethiopia","FK":"Falkland Islands","FO":"Faroe Islands","FJ":"Fiji","FI":"Finland","GF":"French Guiana","PF":"French Polynesia","TF":"French Southern Lands","GA":"Gabon","GM":"Gambia","GE":"Georgia","GH":"Ghana","GI":"Gibraltar","GR":"Greece","GL":"Greenland","GD":"Grenada","GP":"Guadeloupe","GU":"Guam","GT":"Guatemala","GG":"Guernsey","GN":"Guinea","GW":"Guinea-Bissau","GY":"Guyana","HT":"Haiti","HM":"Heard and McDonald Islands","HN":"Honduras","HK":"Hong Kong","HU":"Hungary","IS":"Iceland","IN":"India","ID":"Indonesia","IR":"Iran","IQ":"Iraq","IE":"Ireland","IM":"Isle of Man","IL":"Israel","JM":"Jamaica","JP":"Japan","JE":"Jersey","JO":"Jordan","KZ":"Kazakhstan","KE":"Kenya","KI":"Kiribati","KP":"Korea, North","KR":"Korea, South","XK":"Kosovo","KW":"Kuwait","KG":"Kyrgyzstan","LA":"Laos","LV":"Latvia","LB":"Lebanon","LS":"Lesotho","LR":"Liberia","LY":"Libya","LI":"Liechtenstein","LT":"Lithuania","LU":"Luxembourg","MO":"Macau","MK":"Macedonia","MG":"Madagascar","MW":"Malawi","MY":"Malaysia","MV":"Maldives","ML":"Mali","MT":"Malta","MH":"Marshall Islands","MQ":"Martinique","MR":"Mauritania","MU":"Mauritius","YT":"Mayotte","MX":"Mexico","FM":"Micronesia","MD":"Moldova","MC":"Monaco","MN":"Mongolia","ME":"Montenegro","MS":"Montserrat","MA":"Morocco","MZ":"Mozambique","MM":"Myanmar","NA":"Namibia","NR":"Nauru","NP":"Nepal","NL":"Netherlands","AN":"Netherlands Antilles","NC":"New Caledonia","NZ":"New Zealand","NI":"Nicaragua","NE":"Niger","NG":"Nigeria","NU":"Niue","NF":"Norfolk Island","MP":"Northern Mariana Islands","NO":"Norway","OM":"Oman","PK":"Pakistan","PW":"Palau","PS":"Palestine","PA":"Panama","PG":"Papua New Guinea","PY":"Paraguay","PE":"Peru","PH":"Philippines","PN":"Pitcairn","PL":"Poland","PT":"Portugal","PR":"Puerto Rico","QA":"Qatar","RE":"Reunion","RO":"Romania","RU":"Russian Federation","RW":"Rwanda","SH":"Saint Helena","KN":"Saint Kitts and Nevis","LC":"Saint Lucia","PM":"Saint Pierre and Miquelon","VC":"Saint Vincent and the Grenadines","BL":"Saint-Barth\u00e9lemy","MF":"Saint-Martin (French part)","WS":"Samoa","SM":"San Marino","ST":"Sao Tome and Principe","SA":"Saudi Arabia","SN":"Senegal","RS":"Serbia","SC":"Seychelles","SL":"Sierra Leone","SG":"Singapore","SK":"Slovakia","SI":"Slovenia","SB":"Solomon Islands","SO":"Somalia","ZA":"South Africa","GS":"South Georgia and South Sandwich Islands","ES":"Spain","LK":"Sri Lanka","SD":"Sudan","SR":"Suriname","SJ":"Svalbard and Jan Mayen Islands","SZ":"Swaziland","SE":"Sweden","SY":"Syria","TW":"Taiwan","TJ":"Tajikistan","TZ":"Tanzania","TH":"Thailand","TL":"Timor-Leste","TG":"Togo","TK":"Tokelau","TO":"Tonga","TT":"Trinidad and Tobago","TN":"Tunisia","TR":"Turkey","TM":"Turkmenistan","TC":"Turks and Caicos Islands","TV":"Tuvalu","UG":"Uganda","UA":"Ukraine","AE":"United Arab Emirates","GB":"United Kingdom","UM":"United States Minor Outlying Islands","US":"United States of America","UY":"Uruguay","UZ":"Uzbekistan","VU":"Vanuatu","VA":"Vatican City","VE":"Venezuela","VN":"Vietnam","VG":"Virgin Islands, British","VI":"Virgin Islands, U.S.","WF":"Wallis and Futuna Islands","EH":"Western Sahara","YE":"Yemen","ZM":"Zambia","ZW":"Zimbabwe","AX":"\u00c5land"}};rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].urlToWidget = "https://lema.raisenow.com/widgets/lema/";rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].merchantConfig = "kof-e5f4ea";rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].widgetName = "lema";rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].widgetUUID = "kofi-annan2";rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].widgetParams = {"common":{"scripts":["_default\/js\/select2\/select2.js","_default\/js\/placeholder.js","_default\/js\/ICanHaz.js","_default\/js\/jquery.validate.js","_default\/js\/widget.utils.js","_default\/js\/widget.widget-parameter-utils.js","_default\/js\/widget.base.js","_default\/js\/widget.modules-base.js","_default\/js\/epik.js","_default\/js\/customizedscript.js","_default\/js\/ddswidget-core.js","kofi-annan2\/js\/postcodeValidation.js"],"css":["_default\/css\/styles-neutral.css"],"foo":"bar","base_url":"https:\/\/widget.raisenow.com","base_path":"\/widgets\/","default_lang":"de","payment_type":"single","allowed_cc_types":["vis","amx","eca"],"allowed_salutations":["mr","ms","miss","mrs","neutral"],"min_amount":{"single":1,"recurring":{"monthly":20,"quarterly":60,"semestral":120,"yearly":240}},"payment_method_selection_mode":"accordion","sid":488,"keyword":"GETUDEV","supported_iban_countries":["CH","AT","DE"],"enable_google_analytics":true,"enable_autoscroll_successpage":true,"jquery_version":"3.2.1","http_base_url_endpoint":"https:\/\/widget-api.rnw.io","overlay_target":".dds-widget-container"},"capabilities":{"has_initializer":true},"intervals":{"mode":"jit","weekly":{"expression":"weekly","type":"non-immediate"},"monthly":{"expression":"monthly","type":"non-immediate"},"quarterly":{"expression":"quarterly","type":"non-immediate"},"semestral":{"expression":"semestral","type":"non-immediate"},"yearly":{"expression":"yearly","type":"non-immediate"}},"payment_methods":{"stp":{"recurrence":"single","address_required":true}},"process":{"steps":["currency","amount","payment-method","customer-identity","customer-address","customer-address-compact-mode"],"blocks":{"show":["customer_company","customer_pobox"],"hide":["customer_birthdate","customer_street2","recipient_street2","customer_receipt"]},"prevent_donation_receipt_toggle":true},"fallback_keys":{"confirmation_text":{"base":"payment.success","hierarchy":["payment_method","stored_es_ordered"]},"confirmation_mail":{"base":"email.confirmation","hierarchy":["payment_method","stored_es_ordered"]},"event_mail":{"base":"email.subscription.event","hierarchy":["event","payment_method"]}}};rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].legacy = {};rnwWidget.widgets["lema"]["configurations"]["kofi-annan2"].legacy = {"country":"ch","origin":"normal"};
+        return rnwWidget.widgets['lema']['configurations']['kofi-annan2'];
+    }
+
+    function loadJavascript() {
+        var parameters = addParametersToDdsWidgetConfig();
+
+        scriptUrl = scripts.shift();
+        if (scriptUrl) {
+            scriptUrl = preferredUrl + scriptUrl;
+            scriptTag = document.createElement('script');
+            scriptTag.setAttribute('type', 'text/javascript');
+            scriptTag.setAttribute('src', scriptUrl);
+            if (scriptTag.readyState) {
+                scriptTag.onreadystatechange = function () { // For old versions of IE
+                    if (this.readyState === 'complete' || this.readyState === 'loaded') {
+                        scriptLoaderHandler();
+                    }
+                };
+            } else { // Other browsers
+                scriptTag.onload = scriptLoaderHandler;
+            }
+            // Try to find the head, otherwise default to the documentElement
+            (document.getElementsByTagName('head')[0]
+                                || document.documentElement).appendChild(scriptTag);
+        } else {
+            initializeWidgets(parameters);
+        }
+    }
+
+    function initializeWidgets(parameters) {
+        var jsonpTemplateUrl = preferredUrl + basePath + 'dds-widget-en.html?callback=?',
+            caps = parameters.widgetParams.capabilities || {},
+            ieversion = false;
+
+        if(devMode) {
+            //jsonpTemplateUrl = preferredUrl + '/widgets/lema/_default/htmlgenerator.php?callback=?&widget-uuid=kofi-annan2&lang=en&dev=true';
+        }
+        jQueryFix.extend(parameters, {
+            jsonpTemplateUrl: jsonpTemplateUrl,
+            widgetBaseUrl: baseUrl,
+            widgetConfigUrl: baseUrl + basePath,
+            widgetDefaultUrl: baseUrl + '/widgets/lema/_default/',
+            widgetCdnUrl: cdnUrl,
+            widgetPreferredUrl: preferredUrl,
+            css: css,
+            scripts: scripts,
+        });
+
+        if (caps.has_initializer === true) {
+            initializeWithInitializer(parameters);
+        } else {
+            // old way of injecting CSS
+            if (/MSIE (\d+\.\d+);/.test(navigator.userAgent)) { //test for MSIE x.x;
+                ieversion = new Number(RegExp.$1); // capture x.x portion and store as a number
+            }
+            if (ieversion >= 9 || ieversion === false) {
+                css.push('/widgets/lema/_default/css/radio_checkbox.css');
+            }
+            while(css.length > 0) {
+                addCssTag(preferredUrl + css.shift());
+            }
+            if(ddsWidgetConfig.css !== 'undefined') {
+                 addCssTag(ddsWidgetConfig.css);
+            }
+
+            // old way of adding template markup independent of widget implementation
+            jQueryFix.ajax({
+                url: jsonpTemplateUrl,
+                type: 'GET',
+                cache: false,
+                dataType: 'jsonp',
+                jsonpCallback : 'getWidgetTemplate',
+                crossDomain: true,
+                success: function (data) {
+                    jQueryFix(data).appendTo(jQueryFix('.dds-widget-container'));
+                    window.initWidget(parameters);
+                }
+            });
+        }
+
+        if (parameters.widgetParams.common.enable_google_analytics !== false) {
+            initializeGoogleAnalytics(parameters);
+        }
+
+        if (parameters.widgetParams.common.enable_bugsnag === true && parameters.widgetParams.common.bugsnag_api_key) {
+            initializeBugsnag(parameters.widgetParams.common.bugsnag_api_key);
+        }
+    }
+
+    function initializeWithInitializer(widgetConfig) {
+        // The 'order' variable is used as a fallback mechanism for legacy compatibility. If there are no
+        // widget containers with the 'data-widget' attribute matching the current widget name, it will
+        // initialize all widgent containers _without_ a data-widget attribute
+        var order = ['.dds-widget-container[data-widget="' + widgetConfig.widgetName + '"]', '.dds-widget-container:not([data-widget])'],
+            matches, i;
+
+        for (i = 0; i < order.length; i++) {
+            matches = jQueryFix(order[i]);
+            if (matches.length > 0)
+            {
+                matches.each(function (index, element) {
+                    // instantiate the widget using the registered initializer function
+                    var instance = new window.rnwWidget.widgets[widgetConfig.widgetName].initializer(jQueryFix, jQueryFix(this), widgetConfig);
+                    // store the instance - it is used from return pages to trigger response processing
+                    window.rnwWidget.widgets.instances[instance.id] = instance;
+                });
+                break;
+            }
+        }
+    }
+
+    function initializeGoogleAnalytics(parameters) {
+        // only create a GoogleAnalytics 'ga' object if there isn't one already, otherwise this
+        // would load the analytics.js script a second time which increases overall load time
+        if (window.ga === undefined) {
+            (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+                  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+            })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+        }
+
+        // create a custom _named_ tracker for the widget tracking requests to avoid any
+        // potential conflicts with existing GoogleAnalytics code on the target page
+        ga('create', 'UA-688857-69', 'raisenow.com', {'name': 'rnwWidgetTracker'});
+        ga('rnwWidgetTracker.send', 'pageview', {'location' : window.location.protocol + '//' + window.location.hostname + window.location.pathname + window.location.search, 'page' : '/' + parameters.epikOptions.apiendpoint.replace(/(.*)\//g, "") + '/' + parameters.widgetName + '/' + parameters.widgetUUID + '/' + window.location.hostname + window.location.pathname + window.location.search});
+    }
+
+    function initializeBugsnag(apiKey) {
+        (function (i, s, o, g, r, a, m) {
+            a = s.createElement(o);
+            m = s.getElementsByTagName(o)[0];
+            a.async = 1;
+            a.src = g;
+            m.parentNode.insertBefore(a, m);
+
+            (function init() {
+                if(i.bugsnag) {
+                    i.rnwWidget.utils[r] = i.bugsnag(apiKey);
+                } else {
+                    setTimeout(init, 1000);
+                }
+            })();
+        })(window, document, 'script', '//lema.raisenow.com/widgets/lema/_default/js/bugsnag.min.js', 'bugsnagClient');
+    }
+
+})({scripts:["/widgets/lema/kofi-annan2/js/dds-widget-en.min.js"],css:["/widgets/lema/kofi-annan2/css/dds-widget.min.css"],baseUrl:"https://lema.raisenow.com",cdnBaseUrl:"",basePath:"/widgets/lema/kofi-annan2/"}, {scripts:["/widgets/lema/_default/js/select2/select2.js","/widgets/lema/_default/js/placeholder.js","/widgets/lema/_default/js/ICanHaz.js","/widgets/lema/_default/js/jquery.validate.js","/widgets/lema/_default/js/widget.utils.js","/widgets/lema/_default/js/widget.widget-parameter-utils.js","/widgets/lema/_default/js/widget.base.js","/widgets/lema/_default/js/widget.modules-base.js","/widgets/lema/_default/js/epik.js","/widgets/lema/kofi-annan2/js/customizedscript-en.js","/widgets/lema/_default/js/ddswidget-core.js","/widgets/lema/kofi-annan2/js/postcodeValidation.js"],css:["/widgets/lema/_default/css/styles-neutral.css"],baseUrl:"https://lema.raisenow.com",cdnBaseUrl:"",basePath:"/widgets/lema/kofi-annan2/"});
+
